@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>태양계 수학 탐험</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: #f0f2ff; font-family: 'Noto Sans KR', sans-serif; color: #111; }
+
+/* SCREEN */
+.screen { display: none; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px 16px; }
+.screen.active { display: flex; }
+
+/* TOAST */
+#toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+  background: #22c55e; color: #fff; font-size: 15px; font-weight: 700;
+  padding: 12px 28px; border-radius: 50px; z-index: 9999;
+  transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0;
+  white-space: nowrap; pointer-events: none;
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+#toast.wrong { background: #ef4444; }
+
+/* ===== MAP ===== */
+/* TOP BAR */
+.top-bar {
+  position: fixed; top: 0; right: 0;
+  padding: 12px 16px; z-index: 100;
+}
+.dbl-fab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 50px;
+  border: 2px solid #f59e0b; background: #fff;
+  color: #b45309; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.2);
+}
+.dbl-fab.on { background: #fef3c7; box-shadow: 0 0 12px rgba(245,158,11,0.5); }
+.dbl-fab .badge { background: #f59e0b; color: #fff; border-radius: 50px; padding: 1px 7px; font-size: 11px; }
+
+/* DATE SCORE CARD */
+.today-card {
+  width: 100%; max-width: 420px;
+  background: #fff; border: 1.5px solid #e0e7ff;
+  border-radius: 16px; padding: 14px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+  margin-bottom: 16px;
+}
+.today-date { font-size: 12px; color: #6b7280; font-weight: 500; }
+.today-score-wrap { text-align: right; }
+.today-score-label { font-size: 11px; color: #9ca3af; }
+.today-score-val { font-size: 22px; font-weight: 900; color: #f97316; line-height: 1.1; }
+
+.map-title { font-size: 24px; font-weight: 900; color: #3730a3; text-align: center; margin-bottom: 4px; }
+.map-sub { font-size: 13px; color: #6b7280; text-align: center; margin-bottom: 12px; }
+
+.double-bar { display: flex; justify-content: center; margin-bottom: 16px; }
+.double-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 24px; border-radius: 50px;
+  border: 2px solid #f59e0b; background: #fff;
+  color: #b45309; font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: all .2s;
+}
+.double-btn.on { background: #fef3c7; border-color: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.4); }
+.double-btn .badge { background: #f59e0b; color: #fff; border-radius: 50px; padding: 1px 8px; font-size: 12px; }
+
+.sun-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 6px; }
+.sun {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff7c0, #fbbf24 40%, #f97316 70%, #dc2626);
+  box-shadow: 0 0 24px rgba(251,191,36,0.6);
+  animation: sunpulse 3s ease-in-out infinite;
+}
+@keyframes sunpulse { 0%,100% { box-shadow: 0 0 24px rgba(251,191,36,0.6); } 50% { box-shadow: 0 0 40px rgba(251,191,36,0.9); } }
+.sun-label { font-size: 11px; font-weight: 700; color: #d97706; margin-top: 4px; }
+
+.vline { width: 2px; height: 16px; background: #c7d2fe; margin: 0 auto; }
+
+.planet-list { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 420px; }
+.planet-row { display: flex; flex-direction: column; align-items: center; width: 100%; }
+
+.planet-card {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; padding: 12px 16px; border-radius: 16px;
+  background: #fff; border: 1.5px solid #e0e7ff;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+  cursor: pointer; transition: all .2s; position: relative;
+}
+.planet-card:active { transform: scale(0.98); }
+.planet-card.locked { opacity: 0.4; cursor: not-allowed; }
+.planet-card.double-on { border-color: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.3); }
+
+.planet-orb { width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0; }
+.planet-orb.spin { animation: spin 5s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.planet-info { flex: 1; }
+.planet-name { font-size: 14px; font-weight: 700; color: #111; }
+.planet-kr { font-size: 12px; color: #6b7280; margin-top: 1px; }
+.planet-medal { font-size: 16px; margin-top: 2px; }
+.planet-score { font-size: 11px; color: #6366f1; font-weight: 700; margin-top: 1px; }
+
+.planet-right { font-size: 18px; color: #9ca3af; }
+.double-pip { position: absolute; top: 6px; right: 8px; background: #f59e0b; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 50px; }
+
+/* ===== GAME ===== */
+.game-header { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 480px; margin-bottom: 16px; }
+.g-planet { font-size: 13px; font-weight: 700; color: #4f46e5; }
+.g-score { font-size: 14px; font-weight: 700; color: #b45309; }
+.g-prog { font-size: 13px; color: #6b7280; }
+
+.q-box {
+  width: 100%; max-width: 480px;
+  background: #fff; border: 2px solid #c7d2fe;
+  border-radius: 20px; padding: 28px 20px; text-align: center;
+  margin-bottom: 14px;
+  min-height: 148px;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+}
+.q-text { font-size: clamp(22px, 6vw, 34px); font-weight: 900; color: #3730a3; }
+.q-cd {
+  display: flex; justify-content: center; align-items: center;
+  gap: 10px; margin-top: 14px; min-height: 24px;
+}
+.cd-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #c7d2fe; transition: background .3s, transform .3s;
+}
+.cd-dot.active { background: #4f46e5; transform: scale(1.2); }
+.cd-dot.gone { background: #e5e7eb; transform: scale(0.8); }
+
+.hint-wrap { min-height: 36px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
+.hint-btn {
+  padding: 7px 20px; border-radius: 50px;
+  border: 1.5px solid #a5b4fc; background: #fff;
+  color: #4f46e5; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.hint-text { font-size: 15px; font-weight: 700; color: #2563eb; }
+
+.cards { display: grid; gap: 10px; width: 100%; max-width: 480px; }
+.cards.c2 { grid-template-columns: 1fr 1fr; }
+.cards.c4 { grid-template-columns: 1fr 1fr; }
+.cards.c9 { grid-template-columns: 1fr 1fr 1fr; }
+.cards.c25 { grid-template-columns: repeat(5, 1fr); }
+
+.card {
+  padding: 16px 8px; border-radius: 12px;
+  border: 2px solid #c7d2fe; background: #fff;
+  font-size: clamp(14px, 3vw, 20px); font-weight: 700; color: #111;
+  cursor: pointer; transition: all .2s; text-align: center;
+}
+.card:active:not(:disabled) { transform: scale(0.95); }
+.card.dim { opacity: 0.3; pointer-events: none; }
+.card.ok { border-color: #22c55e; background: #f0fdf4; color: #15803d; }
+.card.ng { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
+.card:disabled { cursor: not-allowed; }
+
+/* ===== RESULT ===== */
+.result-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 32px 20px; }
+.res-orb { width: 96px; height: 96px; border-radius: 50%; margin: 0 auto 16px; }
+.res-orb.spin { animation: spin 4s linear infinite; }
+.res-medal { font-size: 64px; margin-bottom: 8px; }
+.res-title { font-size: 26px; font-weight: 900; color: #111; margin-bottom: 12px; }
+.res-label { font-size: 12px; color: #6b7280; letter-spacing: 2px; margin-bottom: 4px; }
+.res-double { display: inline-block; background: #f59e0b; color: #fff; font-size: 12px; font-weight: 700; padding: 3px 14px; border-radius: 50px; margin-bottom: 8px; }
+.res-score { font-size: clamp(48px, 12vw, 72px); font-weight: 900; color: #f97316; margin-bottom: 6px; }
+.res-correct { font-size: 14px; color: #6b7280; margin-bottom: 28px; }
+.res-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.btn-p {
+  padding: 14px 32px; border-radius: 50px; border: none;
+  background: #4f46e5; color: #fff; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+}
+.btn-p:active { transform: scale(0.97); }
+.next-wrap {
+  width: 100%; max-width: 480px;
+  display: flex; justify-content: center;
+  margin-top: 20px; min-height: 52px;
+}
+.btn-next {
+  padding: 15px 48px; border-radius: 50px; border: none;
+  background: #4f46e5; color: #fff;
+  font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 4px 16px rgba(79,70,229,0.35);
+  animation: popIn .3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.btn-next:active { transform: scale(0.96); }
+.btn-s {
+  padding: 14px 32px; border-radius: 50px;
+  border: 2px solid #4f46e5; background: #fff;
+  color: #4f46e5; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- MAP -->
+<div class="screen active" id="map-screen">
+  <!-- 우상단 두배 부스터 버튼 -->
+  <div class="top-bar">
+    <button class="dbl-fab" id="dbl-btn" onclick="toggleDouble()">
+      ⚡ 두배 부스터 <span class="badge" id="dbl-count">3</span>
+    </button>
+  </div>
+
+  <div class="map-title" style="padding-top:8px;">🪐 태양계 수학 탐험</div>
+  <div class="map-sub">해왕성에서 태양까지</div>
+
+  <!-- 날짜 + 오늘 점수 카드 -->
+  <div class="today-card">
+    <div class="today-date" id="today-date"></div>
+    <div class="today-score-wrap">
+      <div class="today-score-label">TODAY SCORE</div>
+      <div class="today-score-val" id="today-score">0</div>
+    </div>
+  </div>
+  <div class="planet-list" id="planet-list"></div>
+  <div class="vline"></div>
+  <div class="sun-wrap">
+    <div class="sun"></div>
+    <div class="sun-label">☀ 태양</div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="game-screen">
+  <div class="game-header">
+    <div class="g-planet" id="g-planet"></div>
+    <div class="g-score">⭐ <span id="g-score">0</span></div>
+    <div class="g-prog" id="g-prog"></div>
+  </div>
+  <div class="q-box">
+    <div class="q-text" id="q-text"></div>
+    <div class="q-cd" id="q-cd"></div>
+  </div>
+  <div class="hint-wrap" id="hint-wrap">
+    <button class="hint-btn" id="hint-btn" onclick="doHint()">💡 힌트</button>
+  </div>
+  <div class="cards" id="cards"></div>
+  <div class="next-wrap" id="next-wrap"></div>
+</div>
+
+<!-- RESULT -->
+<div class="screen" id="result-screen">
+  <div class="result-wrap">
+    <div class="res-orb" id="res-orb"></div>
+    <div class="res-medal" id="res-medal"></div>
+    <div class="res-title" id="res-title"></div>
+    <div class="res-label">TOTAL SCORE</div>
+    <div class="res-double" id="res-double" style="display:none">⚡ 두배 부스터 적용!</div>
+    <div class="res-score" id="res-score"></div>
+    <div class="res-correct" id="res-correct"></div>
+    <div class="res-btns" id="res-btns"></div>
+  </div>
+</div>
+
+<script>
+// ── PLANETS (해왕성 → 수성) ──
+var PL = [
+  { id:8, en:'Neptune',  kr:'해왕성', bg:'radial-gradient(circle at 35% 35%,#93c5fd,#3b82f6 50%,#1d4ed8)', glow:'rgba(59,130,246,0.6)', color:'#1d4ed8' },
+  { id:7, en:'Uranus',   kr:'천왕성', bg:'radial-gradient(circle at 35% 35%,#a5f3fc,#06b6d4 50%,#0e7490)', glow:'rgba(6,182,212,0.6)',  color:'#0e7490' },
+  { id:6, en:'Saturn',   kr:'토성',   bg:'radial-gradient(circle at 35% 35%,#fde68a,#d97706 50%,#92400e)', glow:'rgba(217,119,6,0.6)',  color:'#92400e' },
+  { id:5, en:'Jupiter',  kr:'목성',   bg:'radial-gradient(circle at 35% 35%,#fed7aa,#ea580c 50%,#9a3412)', glow:'rgba(234,88,12,0.6)',  color:'#9a3412' },
+  { id:4, en:'Mars',     kr:'화성',   bg:'radial-gradient(circle at 35% 35%,#fca5a5,#dc2626 50%,#7f1d1d)', glow:'rgba(220,38,38,0.6)',  color:'#7f1d1d' },
+  { id:3, en:'Earth',    kr:'지구',   bg:'radial-gradient(circle at 35% 35%,#86efac,#16a34a 40%,#166534)', glow:'rgba(22,163,74,0.6)',  color:'#166534' },
+  { id:2, en:'Venus',    kr:'금성',   bg:'radial-gradient(circle at 35% 35%,#fef08a,#ca8a04 50%,#713f12)', glow:'rgba(202,138,4,0.6)',  color:'#713f12' },
+  { id:1, en:'Mercury',  kr:'수성',   bg:'radial-gradient(circle at 35% 35%,#e5e7eb,#9ca3af 50%,#4b5563)', glow:'rgba(156,163,175,0.6)',color:'#4b5563' },
+];
+
+// ── STATE ──
+var S = {
+  prog: {},       // id -> { medal, score }
+  dblLeft: 3,
+  dblOn: false,
+  dblUsed: false,
+  cur: null,
+  qs: [], qi: 0,
+  ans: [], scores: [],
+  active: false,
+  activatedAt: 0,
+  cdTimer: null,
+  hintDone: false,
+};
+
+// 하루 리셋
+(function() {
+  var today = new Date().toDateString();
+  if (localStorage.getItem('dblDate') !== today) {
+    S.dblLeft = 3;
+    localStorage.setItem('dblDate', today);
+    localStorage.setItem('dblLeft', '3');
+  } else {
+    S.dblLeft = parseInt(localStorage.getItem('dblLeft') || '3');
+  }
+})();
+
+// ── QUESTION ──
+function rnd(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function makeAdd() {
+  var a, b, c;
+  if (Math.random() < 0.8) {
+    var t = rnd(1, 4) * 10;
+    a = rnd(1, t - 1); b = t - a; c = rnd(1, 20);
+  } else {
+    a = rnd(1, 30); b = rnd(1, 30); c = rnd(1, 20);
+  }
+  return { text: a + ' + ' + b + ' + ' + c, ans: a+b+c, hint: a+' + '+b+' = '+(a+b) };
+}
+
+function makeMul() {
+  var ns = [rnd(2,9), rnd(2,9), rnd(2,9)].sort(function(a,b){return b-a;});
+  return { text: ns[0]+' × '+ns[1]+' × '+ns[2], ans: ns[0]*ns[1]*ns[2], hint: ns[0]+' × '+ns[1]+' = '+(ns[0]*ns[1]) };
+}
+
+function makeQs() {
+  var arr = [];
+  for (var i = 0; i < 11; i++) arr.push(Math.random() < 0.5 ? makeAdd() : makeMul());
+  return arr;
+}
+
+function cardCount(qi) {
+  if (qi < 4) return 2;
+  if (qi < 7) return 4;
+  if (qi < 9) return 9;
+  return 25;
+}
+
+function makeOpts(ans, n) {
+  var opts = [ans], tries = 0;
+  while (opts.length < n && tries < 300) {
+    tries++;
+    var d = rnd(1, Math.max(5, Math.floor(ans * 0.4)));
+    var v = Math.random() < 0.5 ? ans + d : ans - d;
+    if (v > 0 && opts.indexOf(v) === -1) opts.push(v);
+  }
+  for (var i = opts.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i+1));
+    var tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp;
+  }
+  return opts;
+}
+
+function calcScore(ms) {
+  ms = Math.max(0, Math.min(ms, 8000));
+  return Math.round(1000 * Math.pow((8000 - ms) / 8000, 0.6));
+}
+
+// ── TOAST ──
+var toastTm = null;
+function toast(msg, ok) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = ok ? 'show' : 'show wrong';
+  clearTimeout(toastTm);
+  toastTm = setTimeout(function() { el.className = ''; }, 1400);
+}
+
+// ── MAP ──
+function renderMap() {
+  // 날짜
+  var now = new Date();
+  var dateStr = now.getFullYear() + '년 ' + (now.getMonth()+1) + '월 ' + now.getDate() + '일';
+  document.getElementById('today-date').textContent = dateStr;
+
+  // 오늘 총점 (모든 행성 점수 합산)
+  var total = Object.values(S.prog).reduce(function(sum, v){ return sum + (v.score||0); }, 0);
+  document.getElementById('today-score').textContent = total.toLocaleString();
+
+  var btn = document.getElementById('dbl-btn');
+  document.getElementById('dbl-count').textContent = S.dblLeft;
+  btn.className = 'dbl-fab' + (S.dblOn ? ' on' : '');
+  btn.disabled = S.dblLeft <= 0 && !S.dblOn;
+
+  var list = document.getElementById('planet-list');
+  list.innerHTML = '';
+
+  for (var i = 0; i < PL.length; i++) {
+    var p = PL[i];
+    var cleared = !!S.prog[p.id];
+    var unlocked = i === 0 || !!S.prog[PL[i-1].id];
+
+    if (i > 0) {
+      var vl = document.createElement('div');
+      vl.className = 'vline';
+      list.appendChild(vl);
+    }
+
+    var row = document.createElement('div');
+    row.className = 'planet-row';
+
+    var card = document.createElement('div');
+    card.className = 'planet-card' + (unlocked ? '' : ' locked') + (S.dblOn && unlocked ? ' double-on' : '');
+
+    // orb
+    var orb = document.createElement('div');
+    orb.className = 'planet-orb' + (cleared ? ' spin' : '');
+    orb.style.background = cleared ? p.bg : '#d1d5db';
+    if (cleared) orb.style.boxShadow = '0 0 12px ' + p.glow;
+
+    // info
+    var info = document.createElement('div');
+    info.className = 'planet-info';
+    info.innerHTML = '<div class="planet-name" style="color:' + (cleared ? p.color : '#374151') + '">' + p.en + '</div>'
+      + '<div class="planet-kr">' + p.kr + '</div>'
+      + (cleared ? '<div class="planet-medal">' + S.prog[p.id].medal + '</div><div class="planet-score">' + S.prog[p.id].score.toLocaleString() + ' pts</div>' : '');
+
+    // right
+    var right = document.createElement('div');
+    right.className = 'planet-right';
+    right.textContent = unlocked ? '▶' : '🔒';
+
+    if (S.dblOn && unlocked) {
+      var pip = document.createElement('div');
+      pip.className = 'double-pip';
+      pip.textContent = '⚡×2';
+      card.appendChild(pip);
+    }
+
+    card.appendChild(orb);
+    card.appendChild(info);
+    card.appendChild(right);
+
+    if (unlocked) {
+      (function(pid) {
+        card.onclick = function() { startGame(pid); };
+      })(p.id);
+    }
+
+    row.appendChild(card);
+    list.appendChild(row);
+  }
+}
+
+function toggleDouble() {
+  if (S.dblOn) { S.dblOn = false; }
+  else if (S.dblLeft > 0) { S.dblOn = true; }
+  renderMap();
+}
+
+// ── GAME ──
+function startGame(pid) {
+  S.cur = pid;
+  S.qs = makeQs();
+  S.qi = 0; S.ans = []; S.scores = [];
+  S.dblUsed = S.dblOn;
+  if (S.dblOn) {
+    S.dblOn = false;
+    S.dblLeft--;
+    localStorage.setItem('dblLeft', S.dblLeft);
+  }
+  var p = PL.find(function(x){return x.id===pid;});
+  document.getElementById('g-planet').textContent = p.en + ' · ' + p.kr;
+  show('game-screen');
+  nextQ();
+}
+
+function nextQ() {
+  clearInterval(S.cdTimer);
+  S.active = false;
+  S.hintDone = false;
+
+  var q = S.qs[S.qi];
+  document.getElementById('g-prog').textContent = (S.qi+1) + ' / 11';
+  document.getElementById('g-score').textContent = S.scores.reduce(function(a,b){return a+b;},0).toLocaleString();
+  document.getElementById('q-text').textContent = q.text + ' = ?';
+  // hint 초기화
+  var hw = document.getElementById('hint-wrap');
+  hw.innerHTML = '<button class="hint-btn" onclick="doHint()">💡 힌트</button>';
+  var nw = document.getElementById('next-wrap');
+  nw.innerHTML = '';
+
+  // 카드 흐리게
+  var cn = cardCount(S.qi);
+  var grid = document.getElementById('cards');
+  grid.className = 'cards c' + cn;
+  grid.innerHTML = '';
+  var opts = makeOpts(q.ans, cn);
+  opts.forEach(function(v) {
+    var c = document.createElement('button');
+    c.className = 'card dim';
+    c.textContent = v;
+    c.dataset.v = v;
+    grid.appendChild(c);
+  });
+
+  // dot 카운트다운 (5개 점 → 하나씩 사라짐)
+  var cdEl = document.getElementById('q-cd');
+  cdEl.innerHTML = '';
+  var dots = [];
+  for (var d = 0; d < 5; d++) {
+    var dot = document.createElement('div');
+    dot.className = 'cd-dot active';
+    cdEl.appendChild(dot);
+    dots.push(dot);
+  }
+
+  var cd = 5;
+  S.cdTimer = setInterval(function() {
+    cd--;
+    if (cd >= 0) dots[cd].className = 'cd-dot gone';
+    if (cd <= 0) {
+      clearInterval(S.cdTimer);
+      cdEl.innerHTML = '';
+      activateCards(opts, q);
+    }
+  }, 1000);
+}
+
+function activateCards(opts, q) {
+  S.active = true;
+  S.activatedAt = Date.now();
+  var grid = document.getElementById('cards');
+  var cards = grid.querySelectorAll('.card');
+  cards.forEach(function(c) {
+    c.classList.remove('dim');
+    (function(el) {
+      el.onclick = function() { pick(parseInt(el.dataset.v), q, el); };
+    })(c);
+  });
+}
+
+function doHint() {
+  if (S.hintDone) return;
+  S.hintDone = true;
+  var q = S.qs[S.qi];
+  var hw = document.getElementById('hint-wrap');
+  hw.innerHTML = '<div class="hint-text">💡 ' + q.hint + '</div>';
+}
+
+function pick(val, q, el) {
+  if (!S.active) return;
+  S.active = false;
+  clearInterval(S.cdTimer);
+
+  var ms = Date.now() - S.activatedAt;
+  var ok = val === q.ans;
+  var pts = ok ? calcScore(ms) : 0;
+  S.ans.push(ok ? 1 : 0);
+  S.scores.push(pts);
+
+  // 카드 피드백
+  var grid = document.getElementById('cards');
+  grid.querySelectorAll('.card').forEach(function(c) {
+    c.disabled = true;
+    if (parseInt(c.dataset.v) === q.ans) c.classList.add('ok');
+  });
+  if (!ok) el.classList.add('ng');
+
+  // 진동 (정답)
+  if (ok && navigator.vibrate) navigator.vibrate([30, 20, 60]);
+
+  // 소리
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ok) {
+      // 정답: 밝은 두 음
+      [523, 784].forEach(function(freq, i) {
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = freq;
+        o.type = 'sine';
+        g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.3);
+        o.start(ctx.currentTime + i * 0.15);
+        o.stop(ctx.currentTime + i * 0.15 + 0.3);
+      });
+    } else {
+      // 오답: 낮고 짧은 음
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 220;
+      o.type = 'sawtooth';
+      g.gain.setValueAtTime(0.2, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      o.start(ctx.currentTime);
+      o.stop(ctx.currentTime + 0.25);
+    }
+  } catch(e) {}
+
+  // 토스트
+  toast(ok ? '🎉 잘했어요!' : '😅 정답은 ' + q.ans + ' 이에요', ok);
+
+  // 다음 버튼 - 힌트와 별도 영역
+  var nw = document.getElementById('next-wrap');
+  nw.innerHTML = '<button class="btn-next" onclick="goNext()">다음 →</button>';
+}
+
+function goNext() {
+  S.qi++;
+  if (S.qi < 11) { nextQ(); }
+  else { showResult(); }
+}
+
+// ── RESULT ──
+function showResult() {
+  var correct = S.ans.reduce(function(a,b){return a+b;}, 0);
+  var raw = S.scores.reduce(function(a,b){return a+b;}, 0);
+  var final = S.dblUsed ? raw * 2 : raw;
+
+  var medal, title;
+  if (correct === 11)     { medal = '🥇'; title = 'PERFECT!'; }
+  else if (correct >= 9)  { medal = '🥈'; title = 'EXCELLENT!'; }
+  else if (correct >= 7)  { medal = '🥉'; title = 'GREAT!'; }
+  else                    { medal = '❌'; title = 'TRY AGAIN'; }
+
+  var ok = correct >= 7;
+  if (ok) S.prog[S.cur] = { medal: medal, score: final };
+
+  var p = PL.find(function(x){return x.id===S.cur;});
+  var orb = document.getElementById('res-orb');
+  orb.style.background = ok ? p.bg : '#d1d5db';
+  if (ok) orb.style.boxShadow = '0 0 24px ' + p.glow;
+  orb.className = 'res-orb' + (ok ? ' spin' : '');
+
+  document.getElementById('res-medal').textContent = medal;
+  document.getElementById('res-title').textContent = title;
+  document.getElementById('res-score').textContent = final.toLocaleString();
+  document.getElementById('res-correct').textContent = correct + ' / 11 정답';
+
+  var db = document.getElementById('res-double');
+  db.style.display = S.dblUsed ? 'inline-block' : 'none';
+
+  var btns = document.getElementById('res-btns');
+  btns.innerHTML = '';
+  if (ok) {
+    var b1 = document.createElement('button');
+    b1.className = 'btn-p'; b1.textContent = '🪐 맵으로';
+    b1.onclick = function() { show('map-screen'); renderMap(); };
+    btns.appendChild(b1);
+  } else {
+    var b2 = document.createElement('button');
+    b2.className = 'btn-p'; b2.textContent = '🔄 재도전';
+    b2.onclick = function() { startGame(S.cur); };
+    btns.appendChild(b2);
+    var b3 = document.createElement('button');
+    b3.className = 'btn-s'; b3.textContent = '🏠 홈으로';
+    b3.onclick = function() { show('map-screen'); renderMap(); };
+    btns.appendChild(b3);
+  }
+
+  show('result-screen');
+}
+
+// ── UTIL ──
+function show(id) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+
+renderMap();
+</script>
+</body>
+</html>
